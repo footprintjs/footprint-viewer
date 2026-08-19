@@ -1,0 +1,100 @@
+{
+  "name": "footprint-viewer",
+  "version": "0.1.0",
+  "description": "One component that shows a recorded agent run: Story, Why, Flow, Skill Graph and Data tabs on one shared cursor. You declare what you want to see — or pass nothing and the viewer reads the recording and decides. It wires everything correctly, or refuses in a sentence that names what you passed and where to go.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "demo": "vite",
+    "demo:build": "vite build",
+    "demo:record": "npx --yes tsx demo/generate-skill-run.ts && npx --yes tsx demo/generate-plain-run.ts",
+    "check:package": "publint && attw --pack",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "agentfootprint",
+    "footprintjs",
+    "agent",
+    "llm",
+    "observability",
+    "debugger",
+    "viewer",
+    "explainable-ai",
+    "react",
+    "time-travel"
+  ],
+  "author": "Sanjay Krishna Anbalagan",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/footprintjs/footprint-viewer.git"
+  },
+  "homepage": "https://github.com/footprintjs/footprint-viewer#readme",
+  "bugs": {
+    "url": "https://github.com/footprintjs/footprint-viewer/issues"
+  },
+  "peerDependencies": {
+    "agentfootprint": "^9.48.0",
+    "agentfootprint-lens": "^0.40.0",
+    "agentthinkingui": "^0.29.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "agentthinkingui": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^26.1.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.7",
+    "@xyflow/react": "^12.10.2",
+    "agentfootprint": "^9.50.0",
+    "agentfootprint-lens": "^0.40.0",
+    "agentthinkingui": "^0.29.0",
+    "footprint-explainable-ui": "^0.35.0",
+    "footprintjs": "^9.15.1",
+    "jsdom": "^29.0.2",
+    "publint": "^0.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.0.0",
+    "typescript": "~5.4.5",
+    "vitest": "^4.1.4"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

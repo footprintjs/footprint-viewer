@@ -1,0 +1,10 @@
+node_modules/
+dist/
+demo-dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+package-lock.json
+.playwright-mcp/
+.claude/
+*.log

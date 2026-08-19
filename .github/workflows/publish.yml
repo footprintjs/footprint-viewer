@@ -1,0 +1,72 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+# Least privilege at the top level: NO id-token here. The OIDC publish token is
+# granted ONLY to the `publish` job below, which consumes a pre-built artifact and
+# performs ZERO dependency resolution — so unpinned `npm install` never shares a
+# runtime with the registry token or `npm publish --provenance`.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Fresh install; this job has NO publish power, so a compromised dep here
+      # cannot reach the registry token. A library's CI SHOULD test against the
+      # deps a consumer resolves.
+      - run: npm install
+      - run: npm test
+      - run: npm run build
+
+      # Packaging-correctness gate — block a publish that would ship a types
+      # masquerade / broken export.
+      - run: npx publint
+      - run: npx @arethetypeswrong/cli --pack
+
+      # Stage EXACTLY the published files for the privileged job. package.json
+      # `files` is ["dist","README.md"]; npm always adds package.json + LICENSE.
+      - name: Stage published package
+        run: |
+          mkdir -p pkg
+          cp -R dist package.json README.md LICENSE pkg/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: pkg/
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC trusted publishing — granted to THIS job only
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: package
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Pinned to the 11.x line: npm 12 shipped a broken provenance path
+      # (MODULE_NOT_FOUND: sigstore) that fails `npm publish --provenance`.
+      - run: npm install -g npm@11
+
+      # Publishes the pre-built, verified artifact. No node_modules, no
+      # dependency resolution. Provenance is attested from the OIDC context.
+      - name: Publish to npm
+        run: npm publish --provenance --access public

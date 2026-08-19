@@ -106,6 +106,33 @@ console line — silenced only by writing the drop down:
 }} />
 ```
 
+## The Story tab is the whole player
+
+Story is the run replayed as its own story, on agentthinkingui's player: the
+agent on stage with its thought bubbles, the rack of every tool it could see
+with the picked one lit, the beat transport under them, and the notepad /
+inspector panel beside them. That whole shell is the reading — the notepad is
+one panel of it, and is still reachable on its own:
+
+```tsx
+<FootprintViewer source={source} config={{
+  story: { view: 'notepad' },   // absent: 'player' — the whole shell
+}} />
+```
+
+**Story keeps its own axis.** Its beats are a narration, not a step count, so
+the player drives its own transport and the viewer's shared cursor is not
+moved by a visit here — the other tabs keep their place exactly as they left
+it. Forcing the one cursor onto beats would invent a correspondence the data
+does not carry.
+
+**Who narrates** is reported as `data-story-source` on the tab: `parcel` (the
+story travelled with the recording — the producer's own voice, never
+overwritten), `library` (agentthinkingui's own `fromRecording`, the default
+for an archived run), or `viewer` (the viewer's own replay through
+agentfootprint's narrator — the fallback that needs no optional peer, and the
+one that answers "does this run narrate at all?" for the tab strip).
+
 ## When something is wrong
 
 A wrong input never renders a blank panel. It renders three sentences in the
@@ -119,9 +146,11 @@ name — a typo should never ship.
 - **Required peers:** `agentfootprint-lens` (Flow, Why, Skill Graph and Data
   all ride it), `agentfootprint` (the story narration and the recording
   contract), `react` / `react-dom`.
-- **Optional peer:** `agentthinkingui` — only the Story tab. Declaring
+- **Optional peer:** `agentthinkingui` (0.30+) — only the Story tab. Declaring
   `'story'` without it renders a teaching card in that tab; nothing else
-  changes.
+  changes. Import its stylesheet once in your app
+  (`import 'agentthinkingui/styles.css'`) — the tab says so out loud if it
+  loaded the package and not the styles.
 
 ## Fixtures and demo
 

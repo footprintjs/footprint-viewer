@@ -178,7 +178,7 @@ export function resolveViewer(
       whenEmpty: config?.flow?.whenEmpty ?? 'say-so',
     },
     story: {
-      view: config?.story?.view ?? 'notepad',
+      view: config?.story?.view ?? 'player',
       whenEmpty: config?.story?.whenEmpty ?? 'say-so',
     },
     skillgraph: { whenEmpty: config?.skillgraph?.whenEmpty ?? 'say-so' },

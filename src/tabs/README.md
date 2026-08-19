@@ -8,8 +8,12 @@ Every pixel here comes from the lens libraries the viewer arranges:
 - `SkillGraphTab.tsx` — the lens's SkillGraphDebugger; its own "No skill
   graph ran here" card is the tab's honest empty state.
 - `DataTab.tsx` — the run's own record: final state + the lens EventStream.
-- `StoryTab.tsx` — agentthinkingui's player or notepad, imported lazily
-  (the one optional peer); not installed → the teaching card below.
+- `StoryTab.tsx` — agentthinkingui's whole PLAYER (the scene, the beat
+  transport, the notepad/inspector panel), imported lazily — the one optional
+  peer; not installed → the teaching card below. `story: { view: 'notepad' }`
+  drops the scene for the beats alone. Story keeps its own axis: its beats are
+  a narration, not a step count, so nothing here reads or moves the shared
+  cursor.
 - `TeachingCard.tsx` — the three-sentence refusal grammar (what this reads /
   what you passed looks like / where to go), the doors' voice.
 - `EmptyState.tsx` — a declared tab with nothing to show says so; absence is

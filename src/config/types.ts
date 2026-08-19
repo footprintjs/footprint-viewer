@@ -233,7 +233,12 @@ export interface ViewerConfig {
     whenEmpty?: WhenEmpty;
   };
   story?: {
-    view?: 'notepad' | 'player'; // absent: 'notepad'
+    /** The whole player — the scene (agent, thought bubbles, the rack of every
+     *  tool it saw with the picked one lit), the beat transport, and the
+     *  notepad/inspector panel beside them — or `'notepad'` for those beats
+     *  written out on their own, with no scene. Absent: 'player', because that
+     *  shell IS the Story reading; the notepad alone is one panel of it. */
+    view?: 'player' | 'notepad';
     whenEmpty?: WhenEmpty;
   };
   skillgraph?: { whenEmpty?: WhenEmpty };
@@ -306,7 +311,7 @@ export interface ResolvedViewerConfig {
   landing: LensId;
   why: { hideFrameworkSteps: boolean; whenEmpty: WhenEmpty };
   flow: { tracing: boolean; whenEmpty: WhenEmpty };
-  story: { view: 'notepad' | 'player'; whenEmpty: WhenEmpty };
+  story: { view: 'player' | 'notepad'; whenEmpty: WhenEmpty };
   skillgraph: { whenEmpty: WhenEmpty };
   showTabs: boolean;
 }

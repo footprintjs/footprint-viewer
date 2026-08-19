@@ -135,7 +135,11 @@ describe('defaults encode the incidents', () => {
     expect(resolved.story.whenEmpty).toBe('say-so');
     expect(resolved.skillgraph.whenEmpty).toBe('say-so');
     expect(resolved.why.hideFrameworkSteps).toBe(true);
-    expect(resolved.story.view).toBe('notepad');
+    // The Story tab's default reading is the whole player — the scene, the
+    // transport and the notepad panel. The notepad alone is one panel of it,
+    // and stays reachable as `story: { view: 'notepad' }`.
+    expect(resolved.story.view).toBe('player');
+    expect(resolveViewer({ story: { view: 'notepad' } }, caps).resolved.story.view).toBe('notepad');
   });
 });
 

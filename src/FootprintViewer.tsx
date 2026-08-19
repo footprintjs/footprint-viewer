@@ -287,6 +287,11 @@ function ReadyViewer(props: ReadyViewerProps): React.ReactElement {
     pane = (
       <StoryTab
         story={story}
+        recording={recording}
+        // A story that travelled as its own parcel is the producer's own
+        // voice; only the viewer's own derivation may be replaced by
+        // agentthinkingui's reader.
+        derived={parcelStory === undefined}
         view={resolution.resolved.story.view}
         theme={config?.theme}
         appName={config?.appName}

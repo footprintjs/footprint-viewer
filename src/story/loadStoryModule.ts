@@ -8,6 +8,8 @@
 
 import type * as React from 'react';
 
+import type { StoryTrace } from '../config/types.js';
+
 /**
  * The atui theme namespace, duck-typed — `AgentTheme.toVars(normalize({mode}))`
  * hands back the ~54 CSS custom properties the stylesheet reads.
@@ -24,13 +26,27 @@ export interface StoryThemeNamespace {
   toVars(theme: unknown): Record<string, string>;
 }
 
-/** The two mounts the Story tab uses, duck-typed (atui ships .jsx). */
+/**
+ * The package's own reader for an ARCHIVED run (agentthinkingui 0.30+).
+ *
+ * OPTIONAL in the type because it is version-dependent: under 0.29 the Story
+ * tab falls back to the viewer's own derivation. It throws — by design — on
+ * anything that is not a recording it can read, which is why the Story tab
+ * calls it inside a try (see `readNarration`).
+ */
+export type StoryRecordingReader = (
+  recording: unknown,
+  options?: { agent?: string },
+) => StoryTrace;
+
+/** The mounts and readers the Story tab uses, duck-typed (atui ships .jsx). */
 export interface StoryModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly AgentThinkingUI: React.ComponentType<any>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly Notepad: React.ComponentType<any>;
   readonly AgentTheme?: StoryThemeNamespace;
+  readonly fromRecording?: StoryRecordingReader;
 }
 
 /**

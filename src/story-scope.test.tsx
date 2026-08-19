@@ -1,6 +1,10 @@
 /**
  * THE STORY TAB'S SCOPE — the bug that looks exactly like a missing stylesheet.
  *
+ * These hold the `story: { view: 'notepad' }` reading: the beats written out on
+ * their own, with no scene. The tab's DEFAULT is the whole player, which
+ * renders atui's own root and needs no scope from us (see story-player.test).
+ *
  * agentthinkingui writes every rule as `:where(.atui, .atui-swarm) …`, and its
  * own player renders that root element itself. `<Notepad>` is a sub-component
  * of that player: mounted on its own it has no `.atui` ancestor, so all ~750
@@ -58,7 +62,9 @@ afterEach(() => {
 describe('the notepad is mounted inside the scope its stylesheet is written against', () => {
   it('RED — the notepad has an .atui ancestor, or every atui rule misses it', async () => {
     __setStoryModuleLoaderForTests(() => Promise.resolve(stubStory()));
-    render(<FootprintViewer source={source} config={{ landing: 'story' }} />);
+    render(
+      <FootprintViewer source={source} config={{ landing: 'story', story: { view: 'notepad' } }} />,
+    );
 
     const notepad = await screen.findByTestId('stub-notepad');
     const scope = notepad.closest('.atui');
@@ -71,7 +77,10 @@ describe('the notepad is mounted inside the scope its stylesheet is written agai
   it('carries the theme variables that root would have stamped', async () => {
     __setStoryModuleLoaderForTests(() => Promise.resolve(stubStory()));
     render(
-      <FootprintViewer source={source} config={{ landing: 'story', theme: { mode: 'dark' } }} />,
+      <FootprintViewer
+        source={source}
+        config={{ landing: 'story', story: { view: 'notepad' }, theme: { mode: 'dark' } }}
+      />,
     );
     const scope = await screen.findByTestId('viewer-story-notepad');
     // In dark mode the colours live on the atui root, never on :root — a
@@ -90,7 +99,10 @@ describe('the notepad is mounted inside the scope its stylesheet is written agai
       }),
     );
     render(
-      <FootprintViewer source={source} config={{ landing: 'story', theme: { mode: 'dark' } }} />,
+      <FootprintViewer
+        source={source}
+        config={{ landing: 'story', story: { view: 'notepad' }, theme: { mode: 'dark' } }}
+      />,
     );
     const notepad = await screen.findByTestId('stub-notepad');
     expect(notepad.closest('.atui')).not.toBeNull();
@@ -98,6 +110,8 @@ describe('the notepad is mounted inside the scope its stylesheet is written agai
 });
 
 describe('a stylesheet that did not load is SAID, not swallowed', () => {
+  // On the DEFAULT view — the player — because that is the mount every reader
+  // gets, and an unstyled player is the failure this viewer exists to end.
   it('reports it, and still renders the story', async () => {
     const warnings: ViewerWarning[] = [];
     __setStoryModuleLoaderForTests(() =>
@@ -110,7 +124,7 @@ describe('a stylesheet that did not load is SAID, not swallowed', () => {
       />,
     );
 
-    await screen.findByTestId('stub-notepad');
+    await screen.findByTestId('stub-player');
     await waitFor(() =>
       expect(warnings.map((w) => w.message).join('\n')).toMatch(/stylesheet did not/),
     );

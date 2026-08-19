@@ -8,36 +8,73 @@
 
 import type * as React from 'react';
 
+/**
+ * The atui theme namespace, duck-typed — `AgentTheme.toVars(normalize({mode}))`
+ * hands back the ~54 CSS custom properties the stylesheet reads.
+ *
+ * It matters for the NOTEPAD mount and only for that one: the player renders
+ * atui's own root element and stamps these itself, while `<Notepad>` is a
+ * sub-component that has always expected to be inside that root. Optional in
+ * the type because this is an optional peer whose surface may differ by
+ * version — absent, the notepad still scopes correctly and takes the
+ * stylesheet's own `:root` colours.
+ */
+export interface StoryThemeNamespace {
+  normalize(input: unknown): unknown;
+  toVars(theme: unknown): Record<string, string>;
+}
+
 /** The two mounts the Story tab uses, duck-typed (atui ships .jsx). */
 export interface StoryModule {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly AgentThinkingUI: React.ComponentType<any>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly Notepad: React.ComponentType<any>;
+  readonly AgentTheme?: StoryThemeNamespace;
 }
 
-type Loader = () => Promise<StoryModule | null>;
+/**
+ * What came back — the module, and whether its STYLESHEET came with it.
+ *
+ * The two are separate facts because they fail separately: agentthinkingui
+ * ships its styles as their own entry (`agentthinkingui/styles.css`), and a
+ * bundler that pre-bundles the viewer can resolve the JS and drop the CSS.
+ * The old code swallowed that into one silent `catch`, which is the shape of
+ * bug this whole viewer is written against — a tab that renders, wrong, with
+ * nobody told. Now the tab can say so.
+ */
+export interface LoadedStory {
+  readonly mod: StoryModule;
+  readonly styles: 'loaded' | 'unavailable';
+  /** Why the stylesheet did not load, when it did not. */
+  readonly stylesDetail?: string;
+}
+
+type Loader = () => Promise<LoadedStory | null>;
 
 const defaultLoader: Loader = async () => {
+  let mod: StoryModule;
   try {
-    const mod = (await import('agentthinkingui')) as unknown as StoryModule;
-    try {
-      // The player's stylesheet rides the same optional install.
-      await import('agentthinkingui/styles.css');
-    } catch {
-      // A style-less mount still works; never block on CSS.
-    }
-    return mod;
+    mod = (await import('agentthinkingui')) as unknown as StoryModule;
   } catch {
     return null;
+  }
+  try {
+    // The stylesheet is its own entry, and its own failure.
+    await import('agentthinkingui/styles.css');
+    return { mod, styles: 'loaded' };
+  } catch (error) {
+    // A style-less mount still renders — never block the story on CSS — but
+    // it renders as unstyled text, so the tab reports it.
+    return { mod, styles: 'unavailable', stylesDetail: (error as Error).message };
   }
 };
 
 let loader: Loader = defaultLoader;
-let cached: Promise<StoryModule | null> | undefined;
+let cached: Promise<LoadedStory | null> | undefined;
 
 /** `null` means: not installed. The Story tab renders its teaching card. */
-export function loadStoryModule(): Promise<StoryModule | null> {
+export function loadStoryModule(): Promise<LoadedStory | null> {
   cached ??= loader();
   return cached;
 }

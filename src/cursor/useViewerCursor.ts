@@ -6,8 +6,9 @@
  * breaks this.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  resolveNavigation,
   scrubAxisFor,
   stepForCommitIdx,
   stepForRuntimeStageId,
@@ -15,7 +16,7 @@ import {
 } from 'agentfootprint-lens/why';
 import type { LensRecorder } from 'agentfootprint-lens/core';
 
-import type { LensId, ViewerCursor } from '../config/types.js';
+import type { LensId, ViewerCursor, ViewerNavigationReport } from '../config/types.js';
 
 interface HeldCursor {
   readonly at: ViewerCursor;
@@ -37,16 +38,109 @@ export interface ViewerCursorHandle {
   moveToCommitAxisStep(lens: LensId, step: number): void;
   /** How many stops the commit axis has (the skill-graph transport's total). */
   readonly commitAxisTotal: number;
+  /** What became of the `initialAt` address, or `null` when none was given.
+   *  A MISS is a value here, not a silence — see `initialAt` in ViewerConfig. */
+  readonly navigation: ViewerNavigationReport | null;
+}
+
+/** The sentence for an address that DID land. The lens supplies the words for
+ *  a refusal; a landing is ours to say, in the same grammar. */
+function arrivalSentence(
+  requested: string,
+  landedOn: { runtimeStageId: string; step: number; label: string },
+  total: number,
+  exact: boolean,
+): string {
+  if (exact) {
+    return `"${requested}" is step ${String(landedOn.step + 1)} of ${String(total)} (${landedOn.label}).`;
+  }
+  return (
+    `"${requested}" is inside a scope this ruler shows as one stop, so the cursor is on that scope — ` +
+    `"${landedOn.runtimeStageId}", step ${String(landedOn.step + 1)} of ${String(total)} (${landedOn.label}). ` +
+    `Near, and not the stop you named.`
+  );
 }
 
 export function useViewerCursor(args: {
   readonly recorder: LensRecorder;
   readonly onCursor?: ((at: ViewerCursor) => void) | undefined;
+  /** An address to open on, resolved ONCE against this run's own ruler. The
+   *  lens is already decided by the time this is handed over (the resolver
+   *  lets an address name its tab), so it arrives as a required field. */
+  readonly initialAt?: { readonly lens: LensId; readonly runtimeStageId: string } | undefined;
 }): ViewerCursorHandle {
   const { recorder, onCursor } = args;
-  const [held, setHeld] = useState<HeldCursor | null>(null);
+  const addressLens = args.initialAt?.lens;
+  const address = args.initialAt?.runtimeStageId;
 
   const commitAxis = useMemo(() => scrubAxisFor(recorder, 'step'), [recorder]);
+
+  /**
+   * The address, resolved against the run's own ruler.
+   *
+   * `resolveNavigation` is agentfootprint-lens 0.42's, and the reason it is
+   * worth the dependency is the shape of its answer: a miss carries NO step,
+   * so "jump to something near enough" is not a thing this code could do by
+   * accident. It offers the nearest stop; taking the offer is the host's call
+   * and the host's alone.
+   */
+  const navigation = useMemo<ViewerNavigationReport | null>(() => {
+    if (address === undefined) return null;
+    const result = resolveNavigation(commitAxis, address);
+    if (!result.ok) {
+      return {
+        requested: address,
+        outcome: 'missed',
+        ...(result.nearest !== undefined ? { nearest: { ...result.nearest } } : {}),
+        message: result.message,
+      };
+    }
+    const landedOn = { runtimeStageId: result.runtimeStageId, step: result.step, label: result.label };
+    return {
+      requested: address,
+      outcome: result.match === 'exact' ? 'exact' : 'enclosing',
+      landedOn,
+      message: arrivalSentence(address, landedOn, commitAxis.length, result.match === 'exact'),
+    };
+  }, [commitAxis, address]);
+
+  /**
+   * The held position — SEEDED from the address, synchronously, at the first
+   * render.
+   *
+   * Not in an effect, and the difference is not style. A tab's lens reports
+   * its own opening position as it mounts; a seed applied afterwards is a race
+   * against that report, and a deep link that lands four times out of five is
+   * worse than one that does not exist. Seeded here, every tab renders at the
+   * addressed step from its very first frame and there is nothing to race.
+   *
+   * A seed is also, by construction, ONCE per mount: `useState`'s initializer
+   * runs once. `initialAt` seeds the cursor, it does not control it — dragging
+   * a reader who has scrubbed away back to the host's address would be a
+   * hijack rather than a deep link, so a host that means to navigate a MOUNTED
+   * viewer remounts it (`key={address}`).
+   *
+   * A MISS seeds nothing: the cursor starts exactly where it would have with
+   * no address at all.
+   */
+  const [held, setHeld] = useState<HeldCursor | null>(() => {
+    const landedOn = navigation?.landedOn;
+    if (landedOn === undefined || addressLens === undefined) return null;
+    const position = commitAxis[landedOn.step];
+    if (position === undefined) return null;
+    return {
+      at: {
+        step: landedOn.step,
+        totalSteps: commitAxis.length,
+        runtimeStageId: position.runtimeStageId,
+        commitIdx: position.commitIdx,
+        label: position.label,
+        kind: position.kind,
+        lens: addressLens,
+      },
+      axis: 'step',
+    };
+  });
 
   const hold = useCallback(
     (next: HeldCursor) => {
@@ -105,6 +199,15 @@ export function useViewerCursor(args: {
     [commitAxis, hold],
   );
 
+  /** The host asked a question and is owed the answer — once, on mount. */
+  const reportedRef = useRef(false);
+  useEffect(() => {
+    if (reportedRef.current) return;
+    reportedRef.current = true;
+    if (held !== null) onCursor?.(held.at);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const moveToRuntimeStageId = useCallback(
     (lens: LensId, runtimeStageId: string) => {
       const step = stepForRuntimeStageId(commitAxis, runtimeStageId);
@@ -120,5 +223,6 @@ export function useViewerCursor(args: {
     moveToRuntimeStageId,
     moveToCommitAxisStep: holdFromCommitAxis,
     commitAxisTotal: commitAxis.length,
+    navigation,
   };
 }

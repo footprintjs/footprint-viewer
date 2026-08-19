@@ -190,7 +190,55 @@ function ReadyViewer(props: ReadyViewerProps): React.ReactElement {
     onStats?.(resolution.stats);
   }, [resolution, onStats]);
 
-  const cursor = useViewerCursor({ recorder, onCursor: config?.onCursor });
+  // The address, if the host gave one. Its tab is already decided (an address
+  // may name its own tab, and `resolveViewer` lets it win over `landing`), so
+  // what goes down is the lens the viewer will actually open on.
+  const initialAt = useMemo(
+    () =>
+      config?.initialAt === undefined
+        ? undefined
+        : {
+            lens: config.lens ?? resolution.landing,
+            runtimeStageId: config.initialAt.runtimeStageId,
+          },
+    [config?.initialAt, config?.lens, resolution.landing],
+  );
+
+  const cursor = useViewerCursor({ recorder, onCursor: config?.onCursor, initialAt });
+
+  /**
+   * What became of the address — reported to the host as DATA, and written
+   * into the inference report as a sentence when the viewer did not do
+   * exactly what was asked.
+   *
+   * An EXACT landing is silent on the report: nothing was substituted, so
+   * there is nothing to disclose. A miss and an enclosing landing are both
+   * disclosures — one moved nothing, the other moved somewhere else — and the
+   * viewer says so rather than letting a host believe its address landed.
+   */
+  const onNavigation = config?.onNavigation;
+  const navigation = cursor.navigation;
+  const navigationReportedRef = useRef(false);
+  useEffect(() => {
+    if (navigation === null) return;
+    // Once per mount, like the seeding itself — see `initialAt`.
+    if (navigationReportedRef.current) return;
+    navigationReportedRef.current = true;
+    onNavigation?.(navigation);
+    if (navigation.outcome === 'exact') return;
+    deliverWarnings(
+      [
+        {
+          code: 'navigation',
+          message:
+            navigation.outcome === 'missed'
+              ? `footprint-viewer: initialAt did not land — ${navigation.message} Nothing moved.`
+              : `footprint-viewer: initialAt landed on the enclosing stop — ${navigation.message}`,
+        },
+      ],
+      onWarning,
+    );
+  }, [navigation, onNavigation, onWarning]);
 
   // The tab strip: controlled (`lens`/`onLensChange`) or self-driving.
   const [ownLens, setOwnLens] = useState<LensId>(resolution.landing);

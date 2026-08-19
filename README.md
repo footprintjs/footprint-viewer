@@ -56,6 +56,42 @@ absent stays on screen with an honest empty state instead of vanishing.
 }} />
 ```
 
+## Open on a place — a deep link
+
+A run detail page is a link somebody sends. `initialAt` lets that link carry a
+place: the tab to open, and a **stop** — `runtimeStageId`, footprintjs's own
+address for a stage (`llm#3`, `sf-tools/search#7`). The viewer resolves the
+address against this run's own ruler once, when the recording is ready, and
+every tab shares the cursor it lands on.
+
+```tsx
+<FootprintViewer
+  source={source}
+  config={{
+    initialAt: { lens: 'why', runtimeStageId: 'call-llm#18' },
+    onNavigation: (report) => {
+      if (report.outcome === 'missed') {
+        // Your own copy, from the report's own data:
+        //   "call-llm#18 is not a stop on this run — nearest is llm#12."
+        setNotice(report.message);
+      }
+    },
+  }}
+/>
+```
+
+The half worth knowing is the **miss**. An address from a bookmark, a chat
+answer or another run may not exist on this one — and then nothing moves. The
+cursor stays where it was, `onNavigation` reports `outcome: 'missed'` with the
+`nearest` stop as an **offer** (never taken — moving there is your call), and
+the dev report carries the same sentence. A viewer that jumped to something
+near enough would be answering a question nobody asked, and the reader would
+have no way to tell.
+
+`initialAt` **seeds** the cursor; it does not control it. It is read once per
+mount, so a reader who scrubs away is never dragged back. To send a mounted
+viewer somewhere new, remount it: `key={address}`.
+
 ## Replace a pane — without losing the wiring
 
 A replacement pane receives every capability the shipped pane had: the one

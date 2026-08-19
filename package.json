@@ -1,7 +1,7 @@
 {
   "name": "footprint-viewer",
   "version": "0.1.0",
-  "description": "One component that shows a recorded agent run: Story, Why, Flow, Skill Graph and Data tabs on one shared cursor. You declare what you want to see \u2014 or pass nothing and the viewer reads the recording and decides. It wires everything correctly, or refuses in a sentence that names what you passed and where to go.",
+  "description": "One component that shows a recorded agent run: Story, Why, Flow, Skill Graph and Data tabs on one shared cursor. You declare what you want to see — or pass nothing and the viewer reads the recording and decides. It wires everything correctly, or refuses in a sentence that names what you passed and where to go.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -81,7 +81,7 @@
     "@types/react-dom": "^18.3.7",
     "@xyflow/react": "^12.10.2",
     "agentfootprint": "^9.50.0",
-    "agentfootprint-lens": "^0.40.0",
+    "agentfootprint-lens": "^0.42.0",
     "agentthinkingui": "^0.29.0",
     "footprint-explainable-ui": "^0.35.0",
     "footprintjs": "^9.15.1",

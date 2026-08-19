@@ -25,10 +25,12 @@ export {
   type StoryTrace,
   type ViewerConfig,
   type ViewerCursor,
+  type ViewerNavigationReport,
   type ViewerPaneProps,
   type ViewerSlots,
   type ViewerSource,
   type ViewerStats,
+  type ViewerStop,
   type ViewerWarning,
   type WhenEmpty,
 } from './config/types.js';

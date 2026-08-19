@@ -165,5 +165,30 @@ export function validateViewerConfig(
     assertKnownLens(config.lens, 'the controlled lens prop');
   }
 
+  if (config?.initialAt !== undefined) {
+    const { lens, runtimeStageId } = config.initialAt;
+    // An address is a string with a stage in it. An empty one is not a
+    // narrower address, it is a missing argument — and it would resolve to a
+    // refusal at run time, which is a worse place to learn about a typo.
+    if (typeof runtimeStageId !== 'string' || runtimeStageId.trim() === '') {
+      throw new ViewerConfigError(
+        `footprint-viewer: initialAt.runtimeStageId is ${runtimeStageId === undefined ? 'missing' : `"${String(runtimeStageId)}"`} — ` +
+          `an address needs a stage id, footprintjs's own (like "llm#3" or "sf-tools/search#7"). ` +
+          `Leave initialAt out to open where the viewer would anyway.`,
+      );
+    }
+    if (lens !== undefined) {
+      assertKnownLens(lens, 'initialAt.lens');
+      const offered = config.lenses ?? ALL_LENSES;
+      if (!offered.includes(lens)) {
+        throw new ViewerConfigError(
+          `footprint-viewer: initialAt.lens is "${lens}", but lenses does not include it — ` +
+            `a viewer cannot open on a tab that does not exist. Add "${lens}" to lenses, ` +
+            `or address a tab from [${offered.map((l) => `"${l}"`).join(', ')}].`,
+        );
+      }
+    }
+  }
+
   return source;
 }

@@ -151,8 +151,48 @@ export interface ViewerWarning {
     | 'declared-but-empty'
     | 'config-choice'
     | 'slot-capability-dropped'
-    | 'story-package-missing';
+    | 'story-package-missing'
+    /** An `initialAt` address that did not land where it asked to — a miss, or
+     *  a landing on the enclosing stop. Never silent: a viewer that quietly
+     *  opened somewhere else would be answering a different question. */
+    | 'navigation';
   readonly lens?: LensId;
+  readonly message: string;
+}
+
+/** One stop on the ruler, as the viewer reports it back. */
+export interface ViewerStop {
+  readonly runtimeStageId: string;
+  readonly step: number;
+  readonly label: string;
+}
+
+/**
+ * What became of an `initialAt` address.
+ *
+ * Handed to `onNavigation` as DATA rather than only as a sentence, so a host
+ * can write its own honest copy ("that stop is not on this run — the nearest
+ * is …") without parsing prose. The sentence is here too, from the lens's own
+ * resolver, and it is safe to show a person as it is.
+ */
+export interface ViewerNavigationReport {
+  /** The address the host asked for, byte for byte. */
+  readonly requested: string;
+  /**
+   * `exact`      — that stop, on this ruler.
+   * `enclosing`  — the address named a stop inside a scope the ruler shows as
+   *                one stop, so the viewer landed on the scope. Reported,
+   *                because it is not what was asked for.
+   * `missed`     — nothing was moved. The cursor stayed where it was.
+   */
+  readonly outcome: 'exact' | 'enclosing' | 'missed';
+  /** Where the cursor actually went. Absent on a miss — a miss has no step,
+   *  by construction, so a silent jump is unrepresentable. */
+  readonly landedOn?: ViewerStop;
+  /** On a miss, the nearest stop BEFORE the address — an offer, never taken.
+   *  Absent when the ruler has nothing to offer. */
+  readonly nearest?: ViewerStop;
+  /** One plain sentence, from agentfootprint-lens's own resolver. */
   readonly message: string;
 }
 
@@ -198,6 +238,29 @@ export interface ViewerConfig {
   };
   skillgraph?: { whenEmpty?: WhenEmpty };
 
+  /**
+   * OPEN HERE — an address instead of a click.
+   *
+   * `runtimeStageId` is footprintjs's own address for a stage (`llm#3`,
+   * `sf-tools/search#7`), and `lens` is the tab to open on. The viewer
+   * resolves the address against the run's own ruler once, when the recording
+   * is ready:
+   *
+   *   • it lands, and the cursor is there before the first paint — every tab
+   *     shares that cursor, so switching tabs keeps the place;
+   *   • it does NOT land, and NOTHING moves. The viewer reports the miss on
+   *     `onNavigation` and in the inference report, with the nearest stop as
+   *     an OFFER. A viewer that jumped to something near-enough would be
+   *     answering a question nobody asked.
+   *
+   * Read ONCE, when the recording is ready: this seeds the cursor, it does
+   * not control it. Moving it under a reader who has scrubbed away would be a
+   * hijack, so a later change to this field is not applied — to send a
+   * MOUNTED viewer somewhere new, remount it (`key={address}`) and the new
+   * address is read the same way the first one was.
+   */
+  initialAt?: { lens?: LensId; runtimeStageId: string };
+
   /** Light/dark plus the two chart colours (visited path, cursor). Absent:
    *  follows the reader's system setting, stock colours. One prop stamps all
    *  three libraries' token tiers. */
@@ -226,6 +289,9 @@ export interface ViewerConfig {
   onCursor?: (at: ViewerCursor) => void;
   onStats?: (s: ViewerStats | undefined) => void;
   onWarning?: (w: ViewerWarning) => void;
+  /** What became of `initialAt`. Fires once per address, hit or miss — the
+   *  host asked a question and is owed the answer, including "no". */
+  onNavigation?: (report: ViewerNavigationReport) => void;
 }
 
 /**

@@ -132,7 +132,13 @@ export function resolveViewer(
 
   const visible = tabs.filter((t) => t.status !== 'hidden');
   const firstLit = visible.find((t) => t.status === 'lit') ?? visible[0];
-  const landing = config?.landing ?? firstLit?.id ?? exists[0]!;
+  // An ADDRESS names its tab, and an address is more specific than a landing
+  // preference: `landing` says "open here when nobody said otherwise", and a
+  // deep link is somebody saying otherwise. `lens` (controlled) still wins
+  // over both — that one is not a default at all, it is the host holding the
+  // tab in its own hand.
+  const addressed = config?.initialAt?.lens;
+  const landing = addressed ?? config?.landing ?? firstLit?.id ?? exists[0]!;
   // Turning tracing off is allowed — and visible. This is the capability
   // that was once lost silently, so silence is never how it goes away.
   if (config?.flow?.tracing === false) {
@@ -144,7 +150,16 @@ export function resolveViewer(
     });
   }
 
-  if (config?.landing === undefined) {
+  if (addressed !== undefined && config?.landing !== undefined && config.landing !== addressed) {
+    warnings.push({
+      code: 'config-choice',
+      lens: addressed,
+      message:
+        `footprint-viewer: landing: "${addressed}" — initialAt addressed that tab, so it wins over ` +
+        `landing: "${config.landing}". An address is somebody saying where to open; landing is where to ` +
+        `open when nobody did.`,
+    });
+  } else if (addressed === undefined && config?.landing === undefined) {
     warnings.push({
       code: 'inference',
       message: `footprint-viewer: landing: "${landing}" — the first tab with something to show`,

@@ -11,7 +11,7 @@ import React, { useEffect, useState } from 'react';
 
 import type { StoryTrace, ViewerConfig, ViewerWarning } from '../config/types.js';
 import { STORY_NOT_INSTALLED } from '../source/refusals.js';
-import { loadStoryModule, type StoryModule } from '../story/loadStoryModule.js';
+import { loadStoryModule, type LoadedStory } from '../story/loadStoryModule.js';
 import { EmptyState } from './EmptyState.js';
 import { TeachingCard } from './TeachingCard.js';
 
@@ -25,8 +25,39 @@ export interface StoryTabProps {
 
 type ModuleState =
   | { readonly state: 'loading' }
-  | { readonly state: 'ready'; readonly mod: StoryModule }
+  | { readonly state: 'ready'; readonly loaded: LoadedStory }
   | { readonly state: 'missing' };
+
+/**
+ * The atui SCOPE, supplied by the viewer.
+ *
+ * Every rule in agentthinkingui's stylesheet is written
+ * `:where(.atui, .atui-swarm) …`, and the package's own player renders that
+ * root element itself — which is why the player has always looked right and
+ * the notepad has not. `<Notepad>` is a sub-component: mounted on its own it
+ * has no `.atui` ancestor, so all 748 rules miss and the story renders as
+ * unstyled text. It looks like a missing stylesheet and is not one; the
+ * stylesheet was there the whole time, addressing nothing.
+ *
+ * So the viewer supplies the scope, and with it the theme variables the root
+ * would have carried (`AgentTheme.toVars`) — the colours live on that element,
+ * not on `:root`, in dark mode especially.
+ */
+function atuiScopeStyle(
+  loaded: LoadedStory,
+  mode: 'light' | 'dark' | undefined,
+): React.CSSProperties {
+  const theme = loaded.mod.AgentTheme;
+  const base: React.CSSProperties = { height: '100%', minHeight: 0 };
+  if (theme === undefined || mode === undefined) return base;
+  try {
+    return { ...base, ...(theme.toVars(theme.normalize({ mode })) as React.CSSProperties) };
+  } catch {
+    // A version whose theme namespace does not answer that call still gets
+    // the scope, which is the half that decides styled-or-not.
+    return base;
+  }
+}
 
 export function StoryTab(props: StoryTabProps): React.ReactElement {
   const [loaded, setLoaded] = useState<ModuleState>({ state: 'loading' });
@@ -34,9 +65,9 @@ export function StoryTab(props: StoryTabProps): React.ReactElement {
 
   useEffect(() => {
     let alive = true;
-    void loadStoryModule().then((mod) => {
+    void loadStoryModule().then((story) => {
       if (!alive) return;
-      if (mod === null) {
+      if (story === null) {
         setLoaded({ state: 'missing' });
         props.onWarning?.({
           code: 'story-package-missing',
@@ -45,7 +76,19 @@ export function StoryTab(props: StoryTabProps): React.ReactElement {
             'footprint-viewer: the Story tab is declared but agentthinkingui is not installed — the tab teaches instead of narrating. npm install agentthinkingui, or remove \'story\' from lenses.',
         });
       } else {
-        setLoaded({ state: 'ready', mod });
+        setLoaded({ state: 'ready', loaded: story });
+        if (story.styles === 'unavailable') {
+          // Said out loud rather than swallowed: the story will render, and it
+          // will render unstyled, and an unstyled tab that nobody was told
+          // about is the failure this viewer exists to end.
+          props.onWarning?.({
+            code: 'story-package-missing',
+            lens: 'story',
+            message:
+              'footprint-viewer: agentthinkingui loaded but its stylesheet did not — the Story tab will render unstyled. ' +
+              `Import 'agentthinkingui/styles.css' once in your app. (${story.stylesDetail ?? 'no detail'})`,
+          });
+        }
       }
     });
     return () => {
@@ -76,7 +119,7 @@ export function StoryTab(props: StoryTabProps): React.ReactElement {
     );
   }
 
-  const { AgentThinkingUI, Notepad } = loaded.mod;
+  const { AgentThinkingUI, Notepad } = loaded.loaded.mod;
   const trace = props.story;
 
   if (props.view === 'player') {
@@ -89,9 +132,14 @@ export function StoryTab(props: StoryTabProps): React.ReactElement {
     );
   }
 
-  // 'notepad' (the default): the whole journal, written out.
+  // 'notepad' (the default): the whole journal, written out — inside the
+  // scope its stylesheet is written against (see `atuiScopeStyle`).
   return (
-    <div data-testid="viewer-story-notepad" style={{ minHeight: 240 }}>
+    <div
+      data-testid="viewer-story-notepad"
+      className="atui"
+      style={{ ...atuiScopeStyle(loaded.loaded, props.theme?.mode), minHeight: 240 }}
+    >
       <Notepad
         trace={trace}
         index={trace.steps.length - 1}

@@ -23,6 +23,7 @@ import { FootprintViewer } from './FootprintViewer.js';
 import { ViewerConfigError } from './config/validate.js';
 import type { ViewerNavigationReport, ViewerWarning } from './config/types.js';
 import { skillRun } from './test/fixtures.js';
+import { readOpeningCursor } from './test/openingCursor.js';
 
 const skill = skillRun();
 
@@ -132,21 +133,15 @@ describe('RED — an address that misses moves nothing, and says so', () => {
     // same tab, no address — rather than against a hard-coded -1. The mounted
     // lens reports its own opening position either way; what must be true is
     // that the address changed none of it.
-    const withAddress = {
-      step: ready.getAttribute('data-cursor-step'),
-      stage: ready.getAttribute('data-cursor-stage'),
-      commit: ready.getAttribute('data-cursor-commit'),
-    };
+    // Both mounts must have received their child Lens's opening report before
+    // comparing positions; viewer-ready itself can still carry -1/empty/-1.
+    const withAddress = await readOpeningCursor(ready);
     cleanup();
     render(
       <FootprintViewer source={source} config={{ landing: 'flow' }} />,
     );
-    const control = await screen.findByTestId('viewer-ready');
-    expect(withAddress).toEqual({
-      step: control.getAttribute('data-cursor-step'),
-      stage: control.getAttribute('data-cursor-stage'),
-      commit: control.getAttribute('data-cursor-commit'),
-    });
+    const control = await readOpeningCursor(await screen.findByTestId('viewer-ready'));
+    expect(withAddress).toEqual(control);
 
     // The offer: named, never taken.
     expect(reports[0]!.nearest?.runtimeStageId).toBeTruthy();

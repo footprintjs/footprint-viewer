@@ -9,11 +9,18 @@ correctly, or it refuses in a sentence that names what you passed and where
 to go. Pass nothing but the recording, and the viewer reads it and decides
 what lights up.
 
+## Compatibility and install
+
+For developers embedding the viewer around an existing recording. **Viewer 0.1.0 declares `agentfootprint@^9.48.0` as a peer; it does not declare compatibility with AgentFootprint 12.** Unpinned installation of today's agent SDK can select an incompatible major. For current SDK workflows, start with [Lens](https://github.com/footprintjs/agentfootprint-lens) and its own compatibility instructions.
+
 ```bash
-npm install footprint-viewer agentfootprint-lens agentfootprint react react-dom
+npm install footprint-viewer@0.1.0 agentfootprint@9.50.0 agentfootprint-lens@0.42.0 \
+  footprintjs@9.15.1 footprint-explainable-ui@0.35.0 '@xyflow/react@^12' 'react@^19' 'react-dom@^19'
 # optional — only if you want the Story tab:
-npm install agentthinkingui
+npm install agentthinkingui@0.30.0
 ```
+
+This legacy set follows the viewer's development-era versions and their published peer declarations; leaving Lens or the SDK unpinned can mix generations. It is not a new runtime compatibility test. Keep a known working lockfile for an existing integration. The viewer API below is unchanged.
 
 ## Show a run — zero config
 

@@ -1,7 +1,7 @@
 {
   "name": "footprint-viewer",
   "version": "0.1.0",
-  "description": "One component that shows a recorded agent run: Story, Why, Flow, Skill Graph and Data tabs on one shared cursor. You declare what you want to see — or pass nothing and the viewer reads the recording and decides. It wires everything correctly, or refuses in a sentence that names what you passed and where to go.",
+  "description": "React viewer for recorded agent runs, with Story, Why, Flow, Skill Graph and Data views sharing navigation; targets AgentFootprint 9.x peers.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -35,16 +35,14 @@
     "clean": "rm -rf dist"
   },
   "keywords": [
-    "agentfootprint",
-    "footprintjs",
-    "agent",
-    "llm",
-    "observability",
-    "debugger",
-    "viewer",
-    "explainable-ai",
     "react",
-    "time-travel"
+    "agentfootprint",
+    "execution-trace",
+    "debugging",
+    "viewer",
+    "observability",
+    "time-travel",
+    "footprintjs"
   ],
   "author": "Sanjay Krishna Anbalagan",
   "license": "MIT",
